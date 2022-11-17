@@ -9,7 +9,7 @@
 
 /* eslint-disable no-var */
 
-import type {PriorityLevel} from '../SchedulerPriorities';
+import type { PriorityLevel } from "../SchedulerPriorities";
 
 import {
   enableSchedulerDebugging,
@@ -19,9 +19,9 @@ import {
   frameYieldMs,
   continuousYieldMs,
   maxYieldMs,
-} from '../SchedulerFeatureFlags';
+} from "../SchedulerFeatureFlags";
 
-import {push, pop, peek} from '../SchedulerMinHeap';
+import { push, pop, peek } from "../SchedulerMinHeap";
 
 // TODO: Use symbols?
 import {
@@ -30,7 +30,7 @@ import {
   NormalPriority,
   LowPriority,
   IdlePriority,
-} from '../SchedulerPriorities';
+} from "../SchedulerPriorities";
 import {
   markTaskRun,
   markTaskYield,
@@ -42,9 +42,9 @@ import {
   markTaskStart,
   stopLoggingProfilingEvents,
   startLoggingProfilingEvents,
-} from '../SchedulerProfiling';
+} from "../SchedulerProfiling";
 
-export type Callback = boolean => ?Callback;
+export type Callback = (boolean) => ?Callback;
 
 type Task = {
   id: number, // 任务id
@@ -60,7 +60,7 @@ type Task = {
 let getCurrentTime: () => number | DOMHighResTimeStamp;
 const hasPerformanceNow =
   // $FlowFixMe[method-unbinding]
-  typeof performance === 'object' && typeof performance.now === 'function';
+  typeof performance === "object" && typeof performance.now === "function";
 
 if (hasPerformanceNow) {
   const localPerformance = performance;
@@ -114,15 +114,15 @@ var isHostTimeoutScheduled = false;
 
 // 添加setTimeout 和 setImmediate的polyfill
 // Capture local references to native APIs, in case a polyfill overrides them.
-const localSetTimeout = typeof setTimeout === 'function' ? setTimeout : null;
+const localSetTimeout = typeof setTimeout === "function" ? setTimeout : null;
 const localClearTimeout =
-  typeof clearTimeout === 'function' ? clearTimeout : null;
+  typeof clearTimeout === "function" ? clearTimeout : null;
 const localSetImmediate =
-  typeof setImmediate !== 'undefined' ? setImmediate : null; // IE and Node.js + jsdom
+  typeof setImmediate !== "undefined" ? setImmediate : null; // IE and Node.js + jsdom
 
 // 判断用户正在进行输入，以便让出控制权
 const isInputPending =
-  typeof navigator !== 'undefined' &&
+  typeof navigator !== "undefined" &&
   // $FlowFixMe[prop-missing]
   navigator.scheduling !== undefined &&
   // $FlowFixMe[incompatible-type]
@@ -130,7 +130,7 @@ const isInputPending =
     ? navigator.scheduling.isInputPending.bind(navigator.scheduling)
     : null;
 
-const continuousOptions = {includeContinuous: enableIsInputPendingContinuous};
+const continuousOptions = { includeContinuous: enableIsInputPendingContinuous };
 
 /**
  * 将延迟任务队列中已到期的任务添加到执行队列中
@@ -264,7 +264,7 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
 
     // $FlowFixMe[incompatible-use] found when upgrading Flow
     const callback = currentTask.callback;
-    if (typeof callback === 'function') {
+    if (typeof callback === "function") {
       // $FlowFixMe[incompatible-use] found when upgrading Flow
       currentTask.callback = null;
       // $FlowFixMe[incompatible-use] found when upgrading Flow
@@ -281,7 +281,7 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
 
       const continuationCallback = callback(didUserCallbackTimeout);
       currentTime = getCurrentTime();
-      if (typeof continuationCallback === 'function') {
+      if (typeof continuationCallback === "function") {
         // 如果返回了一个函数，无论当前时间切片还剩余多少时间，都立即跳出调度循环让出主线程
         // 可能在执行的过程中会被中断, 中断的任务会返回一个函数，方便下一次继续执行
         // If a continuation is returned, immediately yield to the main thread
@@ -337,7 +337,7 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
  */
 function unstable_runWithPriority<T>(
   priorityLevel: PriorityLevel,
-  eventHandler: () => T,
+  eventHandler: () => T
 ): T {
   // 确保优先级有效
   switch (priorityLevel) {
@@ -394,7 +394,7 @@ function unstable_next<T>(eventHandler: () => T): T {
 function unstable_wrapCallback<T: (...Array<mixed>) => mixed>(callback: T): T {
   var parentPriorityLevel = currentPriorityLevel;
   // $FlowFixMe[incompatible-return]
-  return function() {
+  return function () {
     // This is a fork of runWithPriority, inlined for performance.
     var previousPriorityLevel = currentPriorityLevel;
     currentPriorityLevel = parentPriorityLevel;
@@ -412,20 +412,20 @@ function unstable_wrapCallback<T: (...Array<mixed>) => mixed>(callback: T): T {
  * @param {*} priorityLevel 任务优先级
  * @param {*} callback 任务回调
  * @param {*} options 配置参数
- * @returns
+ * @return {Task}
  */
 function unstable_scheduleCallback(
   priorityLevel: PriorityLevel,
   callback: Callback,
-  options?: {delay: number},
+  options?: { delay: number }
 ): Task {
   var currentTime = getCurrentTime();
 
   // 获取任务开始时间 可以在配置参数中传入一个延迟时间
   var startTime;
-  if (typeof options === 'object' && options !== null) {
+  if (typeof options === "object" && options !== null) {
     var delay = options.delay;
-    if (typeof delay === 'number' && delay > 0) {
+    if (typeof delay === "number" && delay > 0) {
       startTime = currentTime + delay;
     } else {
       startTime = currentTime;
@@ -572,7 +572,7 @@ let scheduledHostCallback:
   | null
   | ((
       hasTimeRemaining: boolean,
-      initialTime: DOMHighResTimeStamp | number,
+      initialTime: DOMHighResTimeStamp | number
     ) => boolean) = null;
 let taskTimeoutID: TimeoutID = (-1: any);
 
@@ -666,9 +666,9 @@ function requestPaint() {
 function forceFrameRate(fps: number) {
   if (fps < 0 || fps > 125) {
     // Using console['error'] to evade Babel and ESLint
-    console['error'](
-      'forceFrameRate takes a positive int between 0 and 125, ' +
-        'forcing frame rates higher than 125 fps is not supported',
+    console["error"](
+      "forceFrameRate takes a positive int between 0 and 125, " +
+        "forcing frame rates higher than 125 fps is not supported"
     );
     return;
   }
@@ -727,7 +727,7 @@ const performWorkUntilDeadline = () => {
 // 调度performWorkUntilDeadline的异步方法
 // 根据环境的不同，依次使用setImmediate, MessageChannel, setTimeout来异步调度任务执行
 let schedulePerformWorkUntilDeadline;
-if (typeof localSetImmediate === 'function') {
+if (typeof localSetImmediate === "function") {
   // Node.js and old IE.
   // There's a few reasons for why we prefer setImmediate.
   //
@@ -742,7 +742,7 @@ if (typeof localSetImmediate === 'function') {
   schedulePerformWorkUntilDeadline = () => {
     localSetImmediate(performWorkUntilDeadline);
   };
-} else if (typeof MessageChannel !== 'undefined') {
+} else if (typeof MessageChannel !== "undefined") {
   // DOM and Worker environments.
   // We prefer MessageChannel because of the 4ms setTimeout clamping.
   // DOM环境和Worker环境

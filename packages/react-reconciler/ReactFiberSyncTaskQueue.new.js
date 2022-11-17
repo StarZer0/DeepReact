@@ -7,14 +7,14 @@
  * @flow
  */
 
-import type {SchedulerCallback} from './Scheduler';
+import type { SchedulerCallback } from "./Scheduler";
 
 import {
   DiscreteEventPriority,
   getCurrentUpdatePriority,
   setCurrentUpdatePriority,
-} from './ReactEventPriorities.new';
-import {ImmediatePriority, scheduleCallback} from './Scheduler';
+} from "./ReactEventPriorities.new";
+import { ImmediatePriority, scheduleCallback } from "./Scheduler";
 
 let syncQueue: Array<SchedulerCallback> | null = null;
 let includesLegacySyncCallbacks: boolean = false;
@@ -48,6 +48,10 @@ export function flushSyncCallbacksOnlyInLegacyMode() {
   }
 }
 
+/**
+ * 清空同步回调
+ * @returns
+ */
 export function flushSyncCallbacks(): null {
   if (!isFlushingSyncQueue && syncQueue !== null) {
     // Prevent re-entrance.
