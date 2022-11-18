@@ -1385,10 +1385,12 @@ function updateHostRoot(current, workInProgress, renderLanes) {
     throw new Error("Should have a current fiber. This is a bug in React.");
   }
 
+  // 状态计算，更新整合到啊memoizedState上
   const nextProps = workInProgress.pendingProps;
   const prevState = workInProgress.memoizedState;
   const prevChildren = prevState.element;
   cloneUpdateQueue(current, workInProgress);
+  // 遍历updateQueue.shared.pending, 提取有足够优先级的update对象, 计算出最终的状态 workInProgress.memoizedState
   processUpdateQueue(workInProgress, nextProps, null, renderLanes);
 
   const nextState: RootState = workInProgress.memoizedState;
@@ -1410,6 +1412,7 @@ function updateHostRoot(current, workInProgress, renderLanes) {
 
   // Caution: React DevTools currently depends on this property
   // being called "element".
+  // 获取下级"ReactElement"对象
   const nextChildren = nextState.element;
   if (supportsHydration && prevState.isDehydrated) {
     // This is a hydration root whose shell has not yet hydrated. We should

@@ -293,10 +293,11 @@ const {
 
 type ExecutionContext = number;
 
-export const NoContext = /*             */ 0b000;
-const BatchedContext = /*               */ 0b001;
-export const RenderContext = /*         */ 0b010;
-export const CommitContext = /*         */ 0b100;
+// 预制执行栈
+export const NoContext = /*             */ 0b000; // 空执行栈
+const BatchedContext = /*               */ 0b001; // 批处理执行栈
+export const RenderContext = /*         */ 0b010; // 渲染执行栈
+export const CommitContext = /*         */ 0b100; // 提交执行站
 
 type RootExitStatus = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 const RootInProgress = 0; // 清空调度队列后的状态
@@ -311,13 +312,11 @@ const RootDidNotComplete = 6;
 // 当前React的执行上下文
 let executionContext: ExecutionContext = NoContext;
 // The root we're working on
-// 当前处理中的fiber root节点
+// 当前正在构建的fiber树根节点
 let workInProgressRoot: FiberRoot | null = null;
 // The fiber we're working on
 
-/**
- * 当前正在处理的fiber节点
- */
+// 当前正在构建的fiber节点
 let workInProgress: Fiber | null = null;
 // The lanes we're rendering
 // 当前正在渲染的车道
@@ -619,10 +618,16 @@ export function getCurrentTime(): number {
   return now();
 }
 
+/**
+ * 根据当前fiber节点信息返回合适的update更新优先级
+ * @param {*} fiber
+ * @returns
+ */
 export function requestUpdateLane(fiber: Fiber): Lane {
   // Special cases
   const mode = fiber.mode;
   if ((mode & ConcurrentMode) === NoMode) {
+    // Legacy模式都是SyncLane
     return (SyncLane: Lane);
   } else if (
     !deferRenderPhaseUpdateToNextBatch &&
@@ -731,6 +736,8 @@ export function scheduleUpdateOnFiber(
   // 给root添加标记当前有正在进行的更新
   markRootUpdated(root, lane, eventTime);
 
+  // 当前执行上下文栈和render执行栈按位与如果不为空代表当前执行栈包含render执行栈
+  // 即当前更新在渲染阶段被调度
   if (
     (executionContext & RenderContext) !== NoLanes &&
     root === workInProgressRoot
@@ -1536,6 +1543,7 @@ function performSyncWorkOnRoot(root) {
 
   flushPassiveEffects();
 
+  // 获取本次渲染优先级
   let lanes = getNextLanes(root, NoLanes);
   // 判断如果没有同步任务需要执行，直接退出
   if (!includesSomeLane(lanes, SyncLane)) {
@@ -1769,12 +1777,14 @@ export function getRenderLanes(): Lanes {
 }
 
 /**
- * 重置调度队列
+ * 刷新栈帧: 重置 FiberRoot上的全局属性 和 `fiber树构造`循环过程中的全局变量
+ * 当fiber构造过程被打断时，需要还原fiber树构造过程，此时需要恢复上一次的构造进度
  * @param {*} root
  * @param {*} lanes
  * @returns
  */
 function prepareFreshStack(root: FiberRoot, lanes: Lanes): Fiber {
+  // 重置fiber树根节点的属性
   root.finishedWork = null;
   root.finishedLanes = NoLanes;
 
@@ -1803,6 +1813,7 @@ function prepareFreshStack(root: FiberRoot, lanes: Lanes): Fiber {
       interruptedWork = interruptedWork.return;
     }
   }
+  // 重置全局变量
   workInProgressRoot = root;
   const rootWorkInProgress = createWorkInProgress(root.current, null);
   workInProgress = rootWorkInProgress;
@@ -2047,6 +2058,7 @@ export function renderHasNotSuspendedYet(): boolean {
 
 function renderRootSync(root: FiberRoot, lanes: Lanes) {
   const prevExecutionContext = executionContext;
+  // 当前执行栈添加render执行栈，标识进入render阶段
   executionContext |= RenderContext;
   const prevDispatcher = pushDispatcher(root.containerInfo);
   const prevCacheDispatcher = pushCacheDispatcher();

@@ -7,9 +7,9 @@
  * @flow
  */
 
-import type {Fiber, FiberRoot} from './ReactInternalTypes';
-import type {Transition} from './ReactFiberTracingMarkerComponent.old';
-import type {ConcurrentUpdate} from './ReactFiberConcurrentUpdates.old';
+import type { Fiber, FiberRoot } from "./ReactInternalTypes";
+import type { Transition } from "./ReactFiberTracingMarkerComponent.old";
+import type { ConcurrentUpdate } from "./ReactFiberConcurrentUpdates.old";
 
 // TODO: Ideally these types would be opaque but that doesn't work well with
 // our reconciler fork infra, since these leak into non-reconciler packages.
@@ -23,10 +23,10 @@ import {
   enableUpdaterTracking,
   allowConcurrentByDefault,
   enableTransitionTracing,
-} from 'shared/ReactFeatureFlags';
-import {isDevToolsPresent} from './ReactFiberDevToolsHook.old';
-import {ConcurrentUpdatesByDefaultMode, NoMode} from './ReactTypeOfMode';
-import {clz32} from './clz32';
+} from "shared/ReactFeatureFlags";
+import { isDevToolsPresent } from "./ReactFiberDevToolsHook.old";
+import { ConcurrentUpdatesByDefaultMode, NoMode } from "./ReactTypeOfMode";
+import { clz32 } from "./clz32";
 
 // Lane values below should be kept in sync with getLabelForLane(), used by react-devtools-timeline.
 // If those values are changed that package should be rebuilt and redeployed.
@@ -86,40 +86,40 @@ export const OffscreenLane: Lane = /*                   */ 0b1000000000000000000
 export function getLabelForLane(lane: Lane): string | void {
   if (enableSchedulingProfiler) {
     if (lane & SyncLane) {
-      return 'Sync';
+      return "Sync";
     }
     if (lane & InputContinuousHydrationLane) {
-      return 'InputContinuousHydration';
+      return "InputContinuousHydration";
     }
     if (lane & InputContinuousLane) {
-      return 'InputContinuous';
+      return "InputContinuous";
     }
     if (lane & DefaultHydrationLane) {
-      return 'DefaultHydration';
+      return "DefaultHydration";
     }
     if (lane & DefaultLane) {
-      return 'Default';
+      return "Default";
     }
     if (lane & TransitionHydrationLane) {
-      return 'TransitionHydration';
+      return "TransitionHydration";
     }
     if (lane & TransitionLanes) {
-      return 'Transition';
+      return "Transition";
     }
     if (lane & RetryLanes) {
-      return 'Retry';
+      return "Retry";
     }
     if (lane & SelectiveHydrationLane) {
-      return 'SelectiveHydration';
+      return "SelectiveHydration";
     }
     if (lane & IdleHydrationLane) {
-      return 'IdleHydration';
+      return "IdleHydration";
     }
     if (lane & IdleLane) {
-      return 'Idle';
+      return "Idle";
     }
     if (lane & OffscreenLane) {
-      return 'Offscreen';
+      return "Offscreen";
     }
   }
 }
@@ -177,7 +177,7 @@ function getHighestPriorityLanes(lanes: Lanes | Lane): Lanes {
     default:
       if (__DEV__) {
         console.error(
-          'Should have found matching lanes. This is a bug in React.',
+          "Should have found matching lanes. This is a bug in React."
         );
       }
       // This shouldn't be reachable, but as a fallback, return the entire bitmask.
@@ -380,7 +380,7 @@ function computeExpirationTime(lane: Lane, currentTime: number) {
     default:
       if (__DEV__) {
         console.error(
-          'Should have found matching lanes. This is a bug in React.',
+          "Should have found matching lanes. This is a bug in React."
         );
       }
       return NoTimestamp;
@@ -389,7 +389,7 @@ function computeExpirationTime(lane: Lane, currentTime: number) {
 
 export function markStarvedLanesAsExpired(
   root: FiberRoot,
-  currentTime: number,
+  currentTime: number
 ): void {
   // TODO: This gets called every time we yield. We can optimize by storing
   // the earliest expiration time on the root. Then use that to quickly bail out
@@ -441,7 +441,7 @@ export function getHighestPriorityPendingLanes(root: FiberRoot): Lanes {
 
 export function getLanesToRetrySynchronouslyOnError(
   root: FiberRoot,
-  originallyAttemptedLanes: Lanes,
+  originallyAttemptedLanes: Lanes
 ): Lanes {
   if (root.errorRecoveryDisabledLanes & originallyAttemptedLanes) {
     // The error recovery mechanism is disabled until these lanes are cleared.
@@ -584,11 +584,18 @@ export function createLaneMap<T>(initial: T): LaneMap<T> {
   return laneMap;
 }
 
+/**
+ * 为root添加更新标记
+ * @param {*} root
+ * @param {*} updateLane
+ * @param {*} eventTime
+ */
 export function markRootUpdated(
   root: FiberRoot,
   updateLane: Lane,
-  eventTime: number,
+  eventTime: number
 ) {
+  // 添加更新优先级
   root.pendingLanes |= updateLane;
 
   // If there are any suspended transitions, it's possible this new update
@@ -604,6 +611,7 @@ export function markRootUpdated(
   // idle updates until after all the regular updates have finished; there's no
   // way it could unblock a transition.
   if (updateLane !== IdleLane) {
+    // 重置suspendedLanes和pingedLanes
     root.suspendedLanes = NoLanes;
     root.pingedLanes = NoLanes;
   }
@@ -635,7 +643,7 @@ export function markRootSuspended(root: FiberRoot, suspendedLanes: Lanes) {
 export function markRootPinged(
   root: FiberRoot,
   pingedLanes: Lanes,
-  eventTime: number,
+  eventTime: number
 ) {
   root.pingedLanes |= root.suspendedLanes & pingedLanes;
 }
@@ -728,7 +736,7 @@ export function markRootEntangled(root: FiberRoot, entangledLanes: Lanes) {
 export function markHiddenUpdate(
   root: FiberRoot,
   update: ConcurrentUpdate,
-  lane: Lane,
+  lane: Lane
 ) {
   const index = laneToIndex(lane);
   const hiddenUpdates = root.hiddenUpdates;
@@ -743,7 +751,7 @@ export function markHiddenUpdate(
 
 export function getBumpedLaneForHydration(
   root: FiberRoot,
-  renderLanes: Lanes,
+  renderLanes: Lanes
 ): Lane {
   const renderLane = getHighestPriorityLane(renderLanes);
 
@@ -802,7 +810,7 @@ export function getBumpedLaneForHydration(
 export function addFiberToLanesMap(
   root: FiberRoot,
   fiber: Fiber,
-  lanes: Lanes | Lane,
+  lanes: Lanes | Lane
 ) {
   if (!enableUpdaterTracking) {
     return;
@@ -837,7 +845,7 @@ export function movePendingFibersToMemoized(root: FiberRoot, lanes: Lanes) {
 
     const updaters = pendingUpdatersLaneMap[index];
     if (updaters.size > 0) {
-      updaters.forEach(fiber => {
+      updaters.forEach((fiber) => {
         const alternate = fiber.alternate;
         if (alternate === null || !memoizedUpdaters.has(alternate)) {
           memoizedUpdaters.add(fiber);
@@ -853,7 +861,7 @@ export function movePendingFibersToMemoized(root: FiberRoot, lanes: Lanes) {
 export function addTransitionToLanesMap(
   root: FiberRoot,
   transition: Transition,
-  lane: Lane,
+  lane: Lane
 ) {
   if (enableTransitionTracing) {
     const transitionLanesMap = root.transitionLanes;
@@ -870,7 +878,7 @@ export function addTransitionToLanesMap(
 
 export function getTransitionsForLanes(
   root: FiberRoot,
-  lanes: Lane | Lanes,
+  lanes: Lane | Lanes
 ): Array<Transition> | null {
   if (!enableTransitionTracing) {
     return null;
@@ -882,7 +890,7 @@ export function getTransitionsForLanes(
     const lane = 1 << index;
     const transitions = root.transitionLanes[index];
     if (transitions !== null) {
-      transitions.forEach(transition => {
+      transitions.forEach((transition) => {
         transitionsForLanes.push(transition);
       });
     }
