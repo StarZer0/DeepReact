@@ -599,6 +599,10 @@ export function getWorkInProgressRootRenderLanes(): Lanes {
   return workInProgressRootRenderLanes;
 }
 
+/**
+ * 获取当前时间发生时间
+ * @return {number} 当前时间
+ */
 export function requestEventTime(): number {
   if ((executionContext & (RenderContext | CommitContext)) !== NoContext) {
     // We're inside React, so it's fine to read the actual time.
@@ -607,9 +611,11 @@ export function requestEventTime(): number {
   // We're not inside React, so we may be in the middle of a browser event.
   if (currentEventTime !== NoTimestamp) {
     // Use the same start time for all updates until we enter React again.
+    // 对于同一次进入react的所有更新返回相同的开始时间
     return currentEventTime;
   }
   // This is the first update since React yielded. Compute a new start time.
+  // react第一次更新直接返回当前时间
   currentEventTime = now();
   return currentEventTime;
 }
@@ -757,47 +763,6 @@ export function scheduleUpdateOnFiber(
       lane
     );
   } else {
-    // This is a normal update, scheduled from outside the render phase. For
-    // example, during an input event.
-    if (enableUpdaterTracking) {
-      if (isDevToolsPresent) {
-        addFiberToLanesMap(root, fiber, lane);
-      }
-    }
-
-    warnIfUpdatesNotWrappedWithActDEV(fiber);
-
-    if (enableProfilerTimer && enableProfilerNestedUpdateScheduledHook) {
-      if (
-        (executionContext & CommitContext) !== NoContext &&
-        root === rootCommittingMutationOrLayoutEffects
-      ) {
-        if (fiber.mode & ProfileMode) {
-          let current: null | Fiber = fiber;
-          while (current !== null) {
-            if (current.tag === Profiler) {
-              const { id, onNestedUpdateScheduled } = current.memoizedProps;
-              if (typeof onNestedUpdateScheduled === "function") {
-                onNestedUpdateScheduled(id);
-              }
-            }
-            current = current.return;
-          }
-        }
-      }
-    }
-
-    if (enableTransitionTracing) {
-      const transition = ReactCurrentBatchConfig.transition;
-      if (transition !== null && transition.name != null) {
-        if (transition.startTime === -1) {
-          transition.startTime = now();
-        }
-
-        addTransitionToLanesMap(root, transition, lane);
-      }
-    }
-
     if (root === workInProgressRoot) {
       // Received an update to a tree that's in the middle of rendering. Mark
       // that there was an interleaved update work on this root. Unless the
@@ -3924,62 +3889,7 @@ function shouldForceFlushFallbacksInDEV() {
   return __DEV__ && ReactCurrentActQueue.current !== null;
 }
 
-function warnIfUpdatesNotWrappedWithActDEV(fiber: Fiber): void {
-  if (__DEV__) {
-    if (fiber.mode & ConcurrentMode) {
-      if (!isConcurrentActEnvironment()) {
-        // Not in an act environment. No need to warn.
-        return;
-      }
-    } else {
-      // Legacy mode has additional cases where we suppress a warning.
-      if (!isLegacyActEnvironment(fiber)) {
-        // Not in an act environment. No need to warn.
-        return;
-      }
-      if (executionContext !== NoContext) {
-        // Legacy mode doesn't warn if the update is batched, i.e.
-        // batchedUpdates or flushSync.
-        return;
-      }
-      if (
-        fiber.tag !== FunctionComponent &&
-        fiber.tag !== ForwardRef &&
-        fiber.tag !== SimpleMemoComponent
-      ) {
-        // For backwards compatibility with pre-hooks code, legacy mode only
-        // warns for updates that originate from a hook.
-        return;
-      }
-    }
-
-    if (ReactCurrentActQueue.current === null) {
-      const previousFiber = ReactCurrentFiberCurrent;
-      try {
-        setCurrentDebugFiberInDEV(fiber);
-        console.error(
-          "An update to %s inside a test was not wrapped in act(...).\n\n" +
-            "When testing, code that causes React state updates should be " +
-            "wrapped into act(...):\n\n" +
-            "act(() => {\n" +
-            "  /* fire events that update state */\n" +
-            "});\n" +
-            "/* assert on the output */\n\n" +
-            "This ensures that you're testing the behavior the user would see " +
-            "in the browser." +
-            " Learn more at https://reactjs.org/link/wrap-tests-with-act",
-          getComponentNameFromFiber(fiber)
-        );
-      } finally {
-        if (previousFiber) {
-          setCurrentDebugFiberInDEV(fiber);
-        } else {
-          resetCurrentDebugFiberInDEV();
-        }
-      }
-    }
-  }
-}
+function warnIfUpdatesNotWrappedWithActDEV(fiber: Fiber): void {}
 
 function warnIfSuspenseResolutionNotWrappedWithActDEV(root: FiberRoot): void {
   if (__DEV__) {

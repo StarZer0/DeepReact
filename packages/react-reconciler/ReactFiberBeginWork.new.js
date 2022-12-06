@@ -1155,55 +1155,6 @@ function updateClassComponent(
   nextProps: any,
   renderLanes: Lanes
 ) {
-  if (__DEV__) {
-    // This is used by DevTools to force a boundary to error.
-    switch (shouldError(workInProgress)) {
-      case false: {
-        const instance = workInProgress.stateNode;
-        const ctor = workInProgress.type;
-        // TODO This way of resetting the error boundary state is a hack.
-        // Is there a better way to do this?
-        const tempInstance = new ctor(
-          workInProgress.memoizedProps,
-          instance.context
-        );
-        const state = tempInstance.state;
-        instance.updater.enqueueSetState(instance, state, null);
-        break;
-      }
-      case true: {
-        workInProgress.flags |= DidCapture;
-        workInProgress.flags |= ShouldCapture;
-        // eslint-disable-next-line react-internal/prod-error-codes
-        const error = new Error("Simulated error coming from DevTools");
-        const lane = pickArbitraryLane(renderLanes);
-        workInProgress.lanes = mergeLanes(workInProgress.lanes, lane);
-        // Schedule the error boundary to re-render using updated state
-        const update = createClassErrorUpdate(
-          workInProgress,
-          createCapturedValueAtFiber(error, workInProgress),
-          lane
-        );
-        enqueueCapturedUpdate(workInProgress, update);
-        break;
-      }
-    }
-
-    if (workInProgress.type !== workInProgress.elementType) {
-      // Lazy component props can't be validated in createElement
-      // because they're only guaranteed to be resolved here.
-      const innerPropTypes = Component.propTypes;
-      if (innerPropTypes) {
-        checkPropTypes(
-          innerPropTypes,
-          nextProps, // Resolved props
-          "prop",
-          getComponentNameFromType(Component)
-        );
-      }
-    }
-  }
-
   // Push context providers early to prevent context stack mismatches.
   // During mounting we don't know the child context yet as the instance doesn't exist.
   // We will invalidate the child context in finishClassComponent() right after rendering.
@@ -1380,7 +1331,6 @@ function pushHostRootContext(workInProgress) {
 
 function updateHostRoot(current, workInProgress, renderLanes) {
   pushHostRootContext(workInProgress);
-
   if (current === null) {
     throw new Error("Should have a current fiber. This is a bug in React.");
   }
@@ -1644,11 +1594,6 @@ function mountLazyComponent(
   let child;
   switch (resolvedTag) {
     case FunctionComponent: {
-      if (__DEV__) {
-        validateFunctionComponentInDev(workInProgress, Component);
-        workInProgress.type = Component =
-          resolveFunctionForHotReloading(Component);
-      }
       child = updateFunctionComponent(
         null,
         workInProgress,
@@ -1659,10 +1604,6 @@ function mountLazyComponent(
       return child;
     }
     case ClassComponent: {
-      if (__DEV__) {
-        workInProgress.type = Component =
-          resolveClassForHotReloading(Component);
-      }
       child = updateClassComponent(
         null,
         workInProgress,
@@ -1673,10 +1614,6 @@ function mountLazyComponent(
       return child;
     }
     case ForwardRef: {
-      if (__DEV__) {
-        workInProgress.type = Component =
-          resolveForwardRefForHotReloading(Component);
-      }
       child = updateForwardRef(
         null,
         workInProgress,
@@ -1687,19 +1624,6 @@ function mountLazyComponent(
       return child;
     }
     case MemoComponent: {
-      if (__DEV__) {
-        if (workInProgress.type !== workInProgress.elementType) {
-          const outerPropTypes = Component.propTypes;
-          if (outerPropTypes) {
-            checkPropTypes(
-              outerPropTypes,
-              resolvedProps, // Resolved for outer only
-              "prop",
-              getComponentNameFromType(Component)
-            );
-          }
-        }
-      }
       child = updateMemoComponent(
         null,
         workInProgress,
@@ -1709,18 +1633,10 @@ function mountLazyComponent(
       );
       return child;
     }
+    default:
+      break;
   }
   let hint = "";
-  if (__DEV__) {
-    if (
-      Component !== null &&
-      typeof Component === "object" &&
-      Component.$$typeof === REACT_LAZY_TYPE
-    ) {
-      hint = " Did you wrap a component in React.lazy() more than once?";
-    }
-  }
-
   // This message intentionally doesn't mention ForwardRef or MemoComponent
   // because the fact that it's a separate type of work is an
   // implementation detail.
@@ -3856,6 +3772,10 @@ function attemptEarlyBailoutIfNoScheduledUpdate(
           pushMarkerInstance(workInProgress, instance);
         }
       }
+      break;
+    }
+    default: {
+      break;
     }
   }
   return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
@@ -3871,36 +3791,13 @@ function beginWork(
   workInProgress: Fiber,
   renderLanes: Lanes
 ): Fiber | null {
-  if (__DEV__) {
-    if (workInProgress._debugNeedsRemount && current !== null) {
-      // This will restart the begin phase with a new fiber.
-      return remountFiber(
-        current,
-        workInProgress,
-        createFiberFromTypeAndProps(
-          workInProgress.type,
-          workInProgress.key,
-          workInProgress.pendingProps,
-          workInProgress._debugOwner || null,
-          workInProgress.mode,
-          workInProgress.lanes
-        )
-      );
-    }
-  }
-
   if (current !== null) {
     // current !== null 代表update 因为组件首次渲染时，current为null
     const oldProps = current.memoizedProps;
     const newProps = workInProgress.pendingProps;
 
-    if (
-      oldProps !== newProps ||
-      hasLegacyContextChanged() ||
-      // Force a re-render if the implementation changed due to hot reload:
-      (__DEV__ ? workInProgress.type !== current.type : false)
-    ) {
-      // props或者fiber.type发生变化，标记更新
+    if (oldProps !== newProps || hasLegacyContextChanged()) {
+      // 节点props发生变化 或者 legacy模式下context发生变化，标记节点
       // If props or context changed, mark the fiber as having performed work.
       // This may be unset if the props are determined to be equal later (memo).
       didReceiveUpdate = true;
@@ -4065,19 +3962,7 @@ function beginWork(
       const unresolvedProps = workInProgress.pendingProps;
       // Resolve outer props first, then resolve inner props.
       let resolvedProps = resolveDefaultProps(type, unresolvedProps);
-      if (__DEV__) {
-        if (workInProgress.type !== workInProgress.elementType) {
-          const outerPropTypes = type.propTypes;
-          if (outerPropTypes) {
-            checkPropTypes(
-              outerPropTypes,
-              resolvedProps, // Resolved for outer only
-              "prop",
-              getComponentNameFromType(type)
-            );
-          }
-        }
-      }
+
       resolvedProps = resolveDefaultProps(type.type, resolvedProps);
       return updateMemoComponent(
         current,
@@ -4147,6 +4032,9 @@ function beginWork(
           renderLanes
         );
       }
+      break;
+    }
+    default: {
       break;
     }
   }

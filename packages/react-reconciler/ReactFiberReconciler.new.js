@@ -131,13 +131,7 @@ type DevToolsConfig = {
   rendererConfig?: RendererInspectionConfig,
 };
 
-let didWarnAboutNestedUpdates;
 let didWarnAboutFindNodeInStrictMode;
-
-if (__DEV__) {
-  didWarnAboutNestedUpdates = false;
-  didWarnAboutFindNodeInStrictMode = {};
-}
 
 function getContextForSubtree(
   parentComponent: ?React$Component<any, any>
@@ -345,36 +339,37 @@ export function updateContainer(
   parentComponent: ?React$Component<any, any>,
   callback: ?Function
 ): Lane {
-  const current = container.current;
+  const current = container.current; // FiberNode
   const eventTime = requestEventTime();
   const lane = requestUpdateLane(current); // 根据当前时间创建一个优先级
 
-  if (enableSchedulingProfiler) {
-    markRenderScheduled(lane);
-  }
-
+  // 获取子树的context
   const context = getContextForSubtree(parentComponent);
+
   if (container.context === null) {
+    // 第一次时将context赋值给container.context
     container.context = context;
   } else {
+    // 后续因为需要diff，所以放入pendingContext中
     container.pendingContext = context;
   }
 
-  // 创建update对象
+  // 创建update, 每个update都有对应的优先级
   const update = createUpdate(eventTime, lane);
   // Caution: React DevTools currently depends on this property
   // being called "element".
-  update.payload = { element };
+  update.payload = { element }; // update对应的元素
 
-  // 更新callback参数
+  // update对应的回调函数 (第一次时为null)
   callback = callback === undefined ? null : callback;
   if (callback !== null) {
     update.callback = callback;
   }
 
-  // update入队
+  // 将当前更新update入队并返回当前更新队列中的根fiber
   const root = enqueueUpdate(current, update, lane);
   if (root !== null) {
+    // 开始执行协调reconciler流程
     scheduleUpdateOnFiber(root, current, lane, eventTime);
     entangleTransitions(root, current, lane);
   }

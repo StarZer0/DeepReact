@@ -29,31 +29,14 @@ var enableIsInputPending = dynamicFeatureFlags.enableIsInputPending,
   maxYieldMs = dynamicFeatureFlags.maxYieldMs;
 var enableProfiling = enableProfilingFeatureFlag;
 
-/**
- * 向堆中添加节点
- * @param {*} heap
- * @param {*} node
- */
 function push(heap, node) {
   var index = heap.length;
   heap.push(node);
   siftUp(heap, node, index);
 }
-/**
- * 检查堆顶节点
- * @param {*} heap
- * @returns
- */
-
 function peek(heap) {
   return heap.length === 0 ? null : heap[0];
 }
-/**
- * 弹出堆顶元素
- * @param {*} heap
- * @returns
- */
-
 function pop(heap) {
   if (heap.length === 0) {
     return null;

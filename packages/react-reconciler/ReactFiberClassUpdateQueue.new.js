@@ -234,21 +234,6 @@ export function enqueueUpdate<State>(
 
   const sharedQueue: SharedQueue<State> = (updateQueue: any).shared;
 
-  if (__DEV__) {
-    if (
-      currentlyProcessingQueue === sharedQueue &&
-      !didWarnUpdateInsideUpdate
-    ) {
-      console.error(
-        "An update (setState, replaceState, or forceUpdate) was scheduled " +
-          "from inside an update function. Update functions should be pure, " +
-          "with zero side-effects. Consider using componentDidUpdate or a " +
-          "callback."
-      );
-      didWarnUpdateInsideUpdate = true;
-    }
-  }
-
   if (isUnsafeClassRenderPhaseUpdate(fiber)) {
     // This is an unsafe render phase update. Add directly to the update
     // queue so we can process it immediately during the current render.

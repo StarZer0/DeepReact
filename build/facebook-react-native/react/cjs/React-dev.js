@@ -118,8 +118,6 @@ var ReactCurrentActQueue = {
  *
  * The current owner is the component who should own any components that are
  * currently being constructed.
- *
- * 当前组件的所有者是当前组件被创建的并且可以包含任何组建的一个组件
  */
 var ReactCurrentOwner = {
   /**
@@ -701,10 +699,6 @@ function getComponentNameFromType(type) {
 // $FlowFixMe[method-unbinding]
 var hasOwnProperty = Object.prototype.hasOwnProperty;
 
-/**
- * 预制的属性
- */
-
 var RESERVED_PROPS = {
   key: true,
   ref: true,
@@ -718,11 +712,6 @@ var specialPropKeyWarningShown,
 {
   didWarnAboutStringRefs = {};
 }
-/**
- * 是否存在 ref
- * @param {*} config
- * @returns
- */
 
 function hasValidRef(config) {
   {
@@ -737,11 +726,6 @@ function hasValidRef(config) {
 
   return config.ref !== undefined;
 }
-/**
- * 是否存在 key
- * @param {*} config
- * @returns
- */
 
 function hasValidKey(config) {
   {
@@ -835,8 +819,6 @@ function warnIfStringRefCannotBeAutoConverted(config) {
   }
 }
 /**
- * 用于创建React element的工厂函数
- *
  * Factory method to create a new React element. This no longer adheres to
  * the class pattern, so do not use new to call it. Also, instanceof check
  * will not work. Instead test $$typeof field against Symbol.for('react.element') to check
@@ -860,7 +842,6 @@ function warnIfStringRefCannotBeAutoConverted(config) {
 var ReactElement = function(type, key, ref, self, source, owner, props) {
   var element = {
     // This tag allows us to uniquely identify this as a React Element
-    // ReactElement标识
     $$typeof: REACT_ELEMENT_TYPE,
     // Built-in properties that belong on the element
     type: type,
@@ -868,7 +849,6 @@ var ReactElement = function(type, key, ref, self, source, owner, props) {
     ref: ref,
     props: props,
     // Record the component responsible for creating this element.
-    // 记录创建此元素的组件
     _owner: owner
   };
 
@@ -938,15 +918,13 @@ function createElement(type, config, children) {
     if (hasValidKey(config)) {
       {
         checkKeyStringCoercion(config.key);
-      } // 转字符串
+      }
 
       key = "" + config.key;
-    } // babel-preset-react注入的调试信息，提供更有用的错误信息
-    // https://github.com/alangpierce/sucrase/issues/232
+    }
 
     self = config.__self === undefined ? null : config.__self;
     source = config.__source === undefined ? null : config.__source; // Remaining properties are added to a new props object
-    // 剩余属性被添加到新的对象中
 
     for (propName in config) {
       if (
@@ -958,7 +936,6 @@ function createElement(type, config, children) {
     }
   } // Children can be more than one argument, and those are transferred onto
   // the newly allocated props object.
-  // 从第三个参数开始都是children 会被放到props.children上
 
   var childrenLength = arguments.length - 2;
 
@@ -979,7 +956,6 @@ function createElement(type, config, children) {
 
     props.children = childArray;
   } // Resolve default props
-  // 将默认属性添加到props上
 
   if (type && type.defaultProps) {
     var defaultProps = type.defaultProps;
@@ -1018,13 +994,6 @@ function createElement(type, config, children) {
     props
   );
 }
-/**
- * 克隆节点并设置新的key值
- * @param {*} oldElement
- * @param {*} newKey
- * @returns
- */
-
 function cloneAndReplaceKey(oldElement, newKey) {
   var newElement = ReactElement(
     oldElement.type,
@@ -1038,7 +1007,6 @@ function cloneAndReplaceKey(oldElement, newKey) {
   return newElement;
 }
 /**
- * 克隆并返回一个新的节点
  * Clone and return a new ReactElement using element as the starting point.
  * See https://reactjs.org/docs/react-api.html#cloneelement
  */
@@ -1122,7 +1090,6 @@ function cloneElement(element, config, children) {
 }
 /**
  * Verifies the object is a ReactElement.
- * 校验是否是一个ReactElement
  * See https://reactjs.org/docs/react-api.html#isvalidelement
  * @param {?object} object
  * @return {boolean} True if `object` is a ReactElement.
@@ -3757,6 +3724,7 @@ function validateFragmentProps$1(fragment) {
   }
 }
 
+var didWarnAboutKeySpread = {};
 function jsxWithValidation(type, props, key, isStaticChildren, source, self) {
   {
     var validType = isValidElementType(type); // We warn in this case but don't throw. We expect the element creation to
@@ -3841,6 +3809,39 @@ function jsxWithValidation(type, props, key, isStaticChildren, source, self) {
           }
         } else {
           validateChildKeys$1(children, type);
+        }
+      }
+    }
+
+    {
+      if (hasOwnProperty.call(props, "key")) {
+        var componentName = getComponentNameFromType(type);
+        var keys = Object.keys(props).filter(function(k) {
+          return k !== "key";
+        });
+        var beforeExample =
+          keys.length > 0
+            ? "{key: someKey, " + keys.join(": ..., ") + ": ...}"
+            : "{key: someKey}";
+
+        if (!didWarnAboutKeySpread[componentName + beforeExample]) {
+          var afterExample =
+            keys.length > 0 ? "{" + keys.join(": ..., ") + ": ...}" : "{}";
+
+          error(
+            'A props object containing a "key" prop is being spread into JSX:\n' +
+              "  let props = %s;\n" +
+              "  <%s {...props} />\n" +
+              "React keys must be passed directly to JSX without using spread:\n" +
+              "  let props = %s;\n" +
+              "  <%s key={someKey} {...props} />",
+            beforeExample,
+            componentName,
+            afterExample,
+            componentName
+          );
+
+          didWarnAboutKeySpread[componentName + beforeExample] = true;
         }
       }
     }
