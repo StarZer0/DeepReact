@@ -51,7 +51,7 @@
      checkDCE();
      module.exports = require("react-dom/cjs/react-dom.production.min.js");
    } else {
-     module.exports = require("react-dom/cjs/react-dom.development.min.js.js");
+     module.exports = require("react-dom/cjs/react-dom.development.js");
    }
    ```
 
