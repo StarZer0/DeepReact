@@ -3540,12 +3540,10 @@
   }
 
   function dispatchUserBlockingUpdate(domEventName, eventSystemFlags, container, nativeEvent) {
-    {
-      runWithPriority(
-        UserBlockingPriority$1,
-        dispatchEvent.bind(null, domEventName, eventSystemFlags, container, nativeEvent)
-      );
-    }
+    runWithPriority(
+      UserBlockingPriority$1,
+      dispatchEvent.bind(null, domEventName, eventSystemFlags, container, nativeEvent)
+    );
   }
 
   function dispatchEvent(domEventName, eventSystemFlags, targetContainer, nativeEvent) {
@@ -3555,9 +3553,7 @@
 
     var allowReplay = true;
 
-    {
-      allowReplay = (eventSystemFlags & IS_CAPTURE_PHASE) === 0;
-    }
+    allowReplay = (eventSystemFlags & IS_CAPTURE_PHASE) === 0;
 
     if (allowReplay && hasQueuedDiscreteEvents() && isReplayableDiscreteEvent(domEventName)) {
       queueDiscreteEvent(null, domEventName, eventSystemFlags, targetContainer, nativeEvent);
@@ -6591,10 +6587,8 @@
   function prepareForCommit(containerInfo) {
     eventsEnabled = isEnabled();
     selectionInformation = getSelectionInformation();
-    var activeInstance = null;
 
     setEnabled(false);
-    return activeInstance;
   }
   function resetAfterCommit(containerInfo) {
     restoreSelection(selectionInformation);
@@ -7191,31 +7185,6 @@
   var LegacyRoot = 0;
   var BlockingRoot = 1;
   var ConcurrentRoot = 2;
-
-  var rendererID = null;
-  var injectedHook = null;
-
-  function onCommitRoot(root, priorityLevel) {
-    if (injectedHook && typeof injectedHook.onCommitFiberRoot === "function") {
-      try {
-        var didError = (root.current.flags & DidCapture) === DidCapture;
-
-        if (enableProfilerTimer) {
-          injectedHook.onCommitFiberRoot(rendererID, root, priorityLevel, didError);
-        } else {
-          injectedHook.onCommitFiberRoot(rendererID, root, undefined, didError);
-        }
-      } catch (err) {}
-    }
-  }
-
-  function onCommitUnmount(fiber) {
-    if (injectedHook && typeof injectedHook.onCommitFiberUnmount === "function") {
-      try {
-        injectedHook.onCommitFiberUnmount(rendererID, fiber);
-      } catch (err) {}
-    }
-  }
 
   var Scheduler_runWithPriority = unstable_runWithPriority,
     Scheduler_scheduleCallback = unstable_scheduleCallback,
@@ -9675,6 +9644,7 @@
       next: null,
     };
 
+    // 第一个hook会添加到当前准备渲染的fiber.memoizedState上, 后续调用的hook会被添加到memoizedState.next上组成hook链
     if (workInProgressHook === null) {
       currentlyRenderingFiber$1.memoizedState = workInProgressHook = hook;
     } else {
@@ -9684,12 +9654,15 @@
     return workInProgressHook;
   }
 
+  /** 更新当前调用的hook */
   function updateWorkInProgressHook() {
     var nextCurrentHook;
 
+    // 获取当前渲染的fiber节点对应的hook链(memoizedState)
     if (currentHook === null) {
       var current = currentlyRenderingFiber$1.alternate;
 
+      // update时, 获取上一次更新的第一个hook
       if (current !== null) {
         nextCurrentHook = current.memoizedState;
       } else {
@@ -9701,9 +9674,12 @@
 
     var nextWorkInProgressHook;
 
+    // 获取当前待渲染fiber节点对应的hook链
     if (workInProgressHook === null) {
+      // 默认更新时刚开始执行函数组件, memoizedState为null
       nextWorkInProgressHook = currentlyRenderingFiber$1.memoizedState;
     } else {
+      // 执行到第二个setState后, 会进入当前分支, 获取新创建的hook链下一个, 还是null
       nextWorkInProgressHook = workInProgressHook.next;
     }
 
@@ -9712,12 +9688,13 @@
       nextWorkInProgressHook = workInProgressHook.next;
       currentHook = nextCurrentHook;
     } else {
+      // 如果当前已渲染的对应该位置的hook为null, 可能存在类似hook写入判断中的问题
       if (!(nextCurrentHook !== null)) {
-        {
-          throw Error(formatProdErrorMessage(310));
-        }
+        throw Error(formatProdErrorMessage(310));
       }
 
+      // 基于旧状态创建新的状态
+      // ⭐⭐⭐⭐⭐: 注意这里新的hook是基于旧hook创建的, 同时上面关于nextCurrentHook和nextWorkInProgressHook都是同时一起步进的, 这也就是为什么不能将hook写进判断中, 会导致状态问题
       currentHook = nextCurrentHook;
       var newHook = {
         memoizedState: currentHook.memoizedState,
@@ -9727,6 +9704,7 @@
         next: null,
       };
 
+      // 将新创建的hook添加到待渲染fiber的hook链中
       if (workInProgressHook === null) {
         currentlyRenderingFiber$1.memoizedState = workInProgressHook = newHook;
       } else {
@@ -9769,13 +9747,13 @@
   }
 
   function updateReducer(reducer, initialArg, init) {
+    debugger;
+    // 根据旧状态创建函数组件中调用当前setState位置的hook状态
     var hook = updateWorkInProgressHook();
     var queue = hook.queue;
 
     if (!(queue !== null)) {
-      {
-        throw Error(formatProdErrorMessage(311));
-      }
+      throw Error(formatProdErrorMessage(311));
     }
 
     queue.lastRenderedReducer = reducer;
@@ -10110,7 +10088,7 @@
 
     // 将当前effect插入链表
     if (componentUpdateQueue === null) {
-      componentUpdateQueue = createFuncionComponentUpdateQueue();
+      componentUpdateQueue = createFunctionComponentUpdateQueue();
       currentlyRenderingFiber$1.updateQueue = componentUpdateQueue;
       componentUpdateQueue.lastEffect = effect.next = effect;
     } else {
@@ -10403,16 +10381,10 @@
         if (!didUpgrade) {
           didUpgrade = true;
 
-          {
-            setId(makeId());
-          }
+          setId(makeId());
         }
 
-        {
-          {
-            throw Error(formatProdErrorMessage(355));
-          }
-        }
+        throw Error(formatProdErrorMessage(355));
       };
 
       var id = makeOpaqueHydratingObject(readValue);
@@ -12971,6 +12943,7 @@
     throw Error(formatProdErrorMessage(163));
   }
 
+  /** 执行指定fiber上effect链表中类型为Layout | HasEffect的unmount(destroy)函数 */
   function commitHookEffectListUnmount(tag, finishedWork) {
     var updateQueue = finishedWork.updateQueue;
     var lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
@@ -13054,9 +13027,7 @@
 
         if (finishedWork.flags & Update) {
           if (current === null) {
-            {
-              instance.componentDidMount();
-            }
+            instance.componentDidMount();
           } else {
             var prevProps =
               finishedWork.elementType === finishedWork.type
@@ -13140,12 +13111,7 @@
       case LegacyHiddenComponent:
         return;
     }
-
-    {
-      {
-        throw Error(formatProdErrorMessage(163));
-      }
-    }
+    throw Error(formatProdErrorMessage(163));
   }
 
   function hideOrUnhideAllChildren(finishedWork, isHidden) {
@@ -13235,8 +13201,6 @@
   }
 
   function commitUnmount(finishedRoot, current) {
-    onCommitUnmount(current);
-
     switch (current.tag) {
       case FunctionComponent:
       case ForwardRef:
@@ -13408,6 +13372,7 @@
     }
   }
 
+  /** 挂载DOM到指定位置 */
   function commitPlacement(finishedWork) {
     // 获取第一个是DOM的父节点
     var parentFiber = getHostParentFiber(finishedWork);
@@ -13606,9 +13571,7 @@
   }
 
   function commitDeletion(finishedRoot, current) {
-    {
-      unmountHostComponents(finishedRoot, current);
-    }
+    unmountHostComponents(finishedRoot, current);
 
     var alternate = current.alternate;
     detachFiberMutation(current);
@@ -13618,6 +13581,7 @@
     }
   }
 
+  // 提交更新工作
   function commitWork(current, finishedWork) {
     switch (finishedWork.tag) {
       case FunctionComponent:
@@ -13625,9 +13589,8 @@
       case MemoComponent:
       case SimpleMemoComponent:
       case Block: {
-        {
-          commitHookEffectListUnmount(Layout | HasEffect, finishedWork);
-        }
+        // 执行fiber effect链表上Layout|HasEffect类型的unmount函数
+        commitHookEffectListUnmount(Layout | HasEffect, finishedWork);
 
         return;
       }
@@ -13636,6 +13599,7 @@
         return;
       }
 
+      // 普通DOM节点
       case HostComponent: {
         var instance = finishedWork.stateNode;
 
@@ -13656,11 +13620,10 @@
         return;
       }
 
+      // 文本节点
       case HostText: {
         if (!(finishedWork.stateNode !== null)) {
-          {
-            throw Error(formatProdErrorMessage(162));
-          }
+          throw Error(formatProdErrorMessage(162));
         }
 
         var textInstance = finishedWork.stateNode;
@@ -13672,13 +13635,11 @@
       }
 
       case HostRoot: {
-        {
-          var _root = finishedWork.stateNode;
+        var _root = finishedWork.stateNode;
 
-          if (_root.hydrate) {
-            _root.hydrate = false;
-            commitHydratedContainer(_root.containerInfo);
-          }
+        if (_root.hydrate) {
+          _root.hydrate = false;
+          commitHydratedContainer(_root.containerInfo);
         }
 
         return;
@@ -13720,11 +13681,7 @@
       }
     }
 
-    {
-      {
-        throw Error(formatProdErrorMessage(163));
-      }
-    }
+    throw Error(formatProdErrorMessage(163));
   }
 
   function commitSuspenseComponent(finishedWork) {
@@ -13889,8 +13846,6 @@
   var currentEventTime = NoTimestamp;
   var currentEventWipLanes = NoLanes;
   var currentEventPendingLanes = NoLanes;
-  var focusedInstanceHandle = null;
-  var shouldFireAfterActiveInstanceBlur = false;
   function getWorkInProgressRoot() {
     return workInProgressRoot;
   }
@@ -14653,7 +14608,6 @@
   }
 
   function performUnitOfWork(unitOfWork) {
-    debugger;
     var current = unitOfWork.alternate;
     var next;
 
@@ -14863,8 +14817,7 @@
 
       ReactCurrentOwner$2.current = null;
 
-      focusedInstanceHandle = prepareForCommit(root.containerInfo);
-      shouldFireAfterActiveInstanceBlur = false;
+      prepareForCommit(root.containerInfo);
       nextEffect = firstEffect;
 
       // 按nextEffect链遍历所有具有effect的fiber节点, 执行DOM突变前的effect
@@ -14881,22 +14834,18 @@
         }
       } while (nextEffect !== null);
 
-      focusedInstanceHandle = null;
-
       nextEffect = firstEffect;
 
       do {
-        {
-          try {
-            commitMutationEffects(root, renderPriorityLevel);
-          } catch (error) {
-            if (!(nextEffect !== null)) {
-              throw Error(formatProdErrorMessage(330));
-            }
-
-            captureCommitPhaseError(nextEffect, error);
-            nextEffect = nextEffect.nextEffect;
+        try {
+          commitMutationEffects(root, renderPriorityLevel);
+        } catch (error) {
+          if (!(nextEffect !== null)) {
+            throw Error(formatProdErrorMessage(330));
           }
+
+          captureCommitPhaseError(nextEffect, error);
+          nextEffect = nextEffect.nextEffect;
         }
       } while (nextEffect !== null);
 
@@ -14938,6 +14887,7 @@
     } else {
       nextEffect = firstEffect;
 
+      // 清空nextEffect链, 如果fiber具有Deletion标记, 删除fiber对其他值的索引
       while (nextEffect !== null) {
         var nextNextEffect = nextEffect.nextEffect;
         nextEffect.nextEffect = null;
@@ -14968,8 +14918,7 @@
       nestedUpdateCount = 0;
     }
 
-    onCommitRoot(finishedWork.stateNode, renderPriorityLevel);
-
+    // 再次检查root上是否还存在需要执行的调度
     ensureRootIsScheduled(root, now());
 
     if (hasUncaughtError) {
@@ -14991,22 +14940,6 @@
   function commitBeforeMutationEffects() {
     while (nextEffect !== null) {
       var current = nextEffect.alternate;
-
-      if (!shouldFireAfterActiveInstanceBlur && focusedInstanceHandle !== null) {
-        if ((nextEffect.flags & Deletion) !== NoFlags) {
-          if (doesFiberContain(nextEffect, focusedInstanceHandle)) {
-            shouldFireAfterActiveInstanceBlur = true;
-          }
-        } else {
-          if (
-            nextEffect.tag === SuspenseComponent &&
-            isSuspenseBoundaryBeingHidden(current, nextEffect) &&
-            doesFiberContain(nextEffect, focusedInstanceHandle)
-          ) {
-            shouldFireAfterActiveInstanceBlur = true;
-          }
-        }
-      }
 
       var flags = nextEffect.flags;
 
@@ -15101,6 +15034,7 @@
     while (nextEffect !== null) {
       var flags = nextEffect.flags;
 
+      // 检测是否包含Update|Callback类型的更新
       if (flags & (Update | Callback)) {
         var current = nextEffect.alternate;
         commitLifeCycles(root, current, nextEffect);
