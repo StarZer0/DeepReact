@@ -9521,13 +9521,7 @@
   var didScheduleRenderPhaseUpdateDuringThisPass = false;
   var RE_RENDER_LIMIT = 25;
 
-  function throwInvalidHookError() {
-    {
-      {
-        throw Error(formatProdErrorMessage(321));
-      }
-    }
-  }
+  function throwInvalidHookError() {}
 
   function areHookInputsEqual(nextDeps, prevDeps) {
     if (prevDeps === null) {
@@ -9747,7 +9741,6 @@
   }
 
   function updateReducer(reducer, initialArg, init) {
-    debugger;
     // 根据旧状态创建函数组件中调用当前setState位置的hook状态
     var hook = updateWorkInProgressHook();
     var queue = hook.queue;
@@ -10150,6 +10143,7 @@
     }
 
     currentlyRenderingFiber$1.flags |= fiberFlags;
+    // 添加HasEffect标记表示effect具有更新
     hook.memoizedState = pushEffect(HasEffect | hookFlags, create, destroy, nextDeps);
   }
 
@@ -10371,56 +10365,6 @@
     return [start, isPending];
   }
 
-  function mountOpaqueIdentifier() {
-    var makeId = makeClientId;
-
-    if (getIsHydrating()) {
-      var didUpgrade = false;
-
-      var readValue = function () {
-        if (!didUpgrade) {
-          didUpgrade = true;
-
-          setId(makeId());
-        }
-
-        throw Error(formatProdErrorMessage(355));
-      };
-
-      var id = makeOpaqueHydratingObject(readValue);
-      var setId = mountState(id)[1];
-
-      if ((currentlyRenderingFiber$1.mode & BlockingMode) === NoMode) {
-        currentlyRenderingFiber$1.flags |= Update | Passive;
-        pushEffect(
-          HasEffect | Passive$1,
-          function () {
-            setId(makeId());
-          },
-          undefined,
-          null
-        );
-      }
-
-      return id;
-    } else {
-      var _id = makeId();
-
-      mountState(_id);
-      return _id;
-    }
-  }
-
-  function updateOpaqueIdentifier() {
-    var id = updateState()[0];
-    return id;
-  }
-
-  function rerenderOpaqueIdentifier() {
-    var id = rerenderState()[0];
-    return id;
-  }
-
   /**
    *
    * @param {FiberNode} fiber 执行hook对应的react组件fiber
@@ -10504,7 +10448,6 @@
     useDeferredValue: throwInvalidHookError,
     useTransition: throwInvalidHookError,
     useMutableSource: throwInvalidHookError,
-    useOpaqueIdentifier: throwInvalidHookError,
     unstable_isNewReconciler: enableNewReconciler,
   };
   var HooksDispatcherOnMount = {
@@ -10522,7 +10465,6 @@
     useDeferredValue: mountDeferredValue,
     useTransition: mountTransition,
     useMutableSource: mountMutableSource,
-    useOpaqueIdentifier: mountOpaqueIdentifier,
     unstable_isNewReconciler: enableNewReconciler,
   };
   var HooksDispatcherOnUpdate = {
@@ -10540,7 +10482,6 @@
     useDeferredValue: updateDeferredValue,
     useTransition: updateTransition,
     useMutableSource: updateMutableSource,
-    useOpaqueIdentifier: updateOpaqueIdentifier,
     unstable_isNewReconciler: enableNewReconciler,
   };
   var HooksDispatcherOnRerender = {
@@ -10558,7 +10499,6 @@
     useDeferredValue: rerenderDeferredValue,
     useTransition: rerenderTransition,
     useMutableSource: updateMutableSource,
-    useOpaqueIdentifier: rerenderOpaqueIdentifier,
     unstable_isNewReconciler: enableNewReconciler,
   };
 
@@ -14750,6 +14690,7 @@
 
   /** Commit阶段： 将虚拟DOM的更新应用到真实DOM上, 并且执行副作用操作 */
   function commitRootImpl(root, renderPriorityLevel) {
+    // logStacks("[Commit Root Impl]");
     do {
       // 触发并处理所有尚未被执行的effect
       flushPassiveEffects();
@@ -14823,6 +14764,7 @@
       // 按nextEffect链遍历所有具有effect的fiber节点, 执行DOM突变前的effect
       do {
         try {
+          //??? 执行上一次render后产生的unmount函数和mount函数(哪一阶段的)
           commitBeforeMutationEffects();
         } catch (error) {
           if (!(nextEffect !== null)) {
@@ -14948,11 +14890,12 @@
         commitBeforeMutationLifeCycles(current, nextEffect);
       }
 
-      // 清空当前effects队列(组件卸载, 组件挂载等)
+      // 判断组件是否存在被动更新(不是由组件自身的更新触发的)
       if ((flags & Passive) !== NoFlags) {
         if (!rootDoesHavePassiveEffects) {
           rootDoesHavePassiveEffects = true;
           scheduleCallback(NormalPriority$1, function () {
+            // 清空被动effect
             flushPassiveEffects();
             return null;
           });
@@ -15073,6 +15016,7 @@
     }
   }
   function enqueuePendingPassiveHookEffectUnmount(fiber, effect) {
+    // logStacks();
     pendingPassiveHookEffectsUnmount.push(effect, fiber);
 
     if (!rootDoesHavePassiveEffects) {
